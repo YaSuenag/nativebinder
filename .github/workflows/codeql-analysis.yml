@@ -38,6 +38,8 @@ jobs:
           queries: security-extended,security-and-quality
 
       - name: Build
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: mvn -B -DskipTests package
 
       - name: Perform CodeQL Analysis

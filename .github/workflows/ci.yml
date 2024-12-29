@@ -24,4 +24,6 @@ jobs:
           cache: maven
 
       - name: 'Run Maven'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: mvn -B test
