@@ -27,7 +27,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'target/site/apidocs'
+          path: 'target/reports/apidocs'
 
   deploy_page:
     needs: upload
