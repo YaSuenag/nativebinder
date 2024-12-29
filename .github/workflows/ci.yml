@@ -1,0 +1,27 @@
+name: Maven Build & Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    name: Run Maven on ${{ matrix.os }}
+
+    steps:
+      - name: 'Checkout repository'
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: oracle
+          java-version: 22
+          cache: maven
+
+      - name: 'Run Maven'
+        run: mvn -B test

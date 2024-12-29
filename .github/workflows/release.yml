@@ -1,0 +1,44 @@
+name: Publish new release
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: "publish"
+  cancel-in-progress: true
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: oracle
+          java-version: 22
+          cache: maven
+      - name: Publish to GitHub Packages via Apache Maven
+        run: mvn -B -DskipTests deploy javadoc:javadoc
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'target/site/apidocs'
+
+  deploy_page:
+    needs: upload
+    permissions:
+      pages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
