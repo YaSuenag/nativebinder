@@ -12,7 +12,7 @@ Native Binder generates stub code dynamically to remove top of 2 arguments - `JN
 > `errno` cannot be obtained.
 
 * Javadoc: https://yasuenag.github.io/nativebinder/
-* Maven package: https://github.com/YaSuenag/naivebinder/packages/
+* Maven package: https://github.com/YaSuenag/nativebinder/packages/
 
 # Requirements
 
