@@ -28,6 +28,12 @@ along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
     <artifactId>nativebinder</artifactId>
     <name>NativeBinder</name>
 
+    <scm>
+        <connection>scm:git:git://github.com/YaSuenag/nativebinder.git</connection>
+        <developerConnection>scm:git:ssh://github.com:YaSuenag/nativebinder.git</developerConnection>
+        <url>https://github.com/YaSuenag/nativebinder</url>
+    </scm>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>22</maven.compiler.source>
