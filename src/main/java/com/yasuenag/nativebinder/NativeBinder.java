@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Yasumasa Suenaga
+ * Copyright (C) 2024, 2025, Yasumasa Suenaga
  *
  * This file is part of nativebinder.
  *
@@ -33,6 +33,7 @@ import com.yasuenag.ffmasm.amd64.Register;
 import com.yasuenag.ffmasm.amd64.SSEAsmBuilder;
 
 import com.yasuenag.nativebinder.internal.LinuxNativeBinder;
+import com.yasuenag.nativebinder.internal.WindowsNativeBinder;
 
 
 /**
@@ -128,6 +129,9 @@ public abstract class NativeBinder{
       var osName = System.getProperty("os.name");
       if(osName.equals("Linux")){
         return new LinuxNativeBinder();
+      }
+      else if(osName.startsWith("Windows")){
+        return new WindowsNativeBinder();
       }
       else{
         throw new UnsupportedPlatformException(osName);
@@ -246,7 +250,14 @@ public abstract class NativeBinder{
           }
         }
         else{
-          throw new IllegalStateException("Should not be reg-mem");
+          // reg to mem (for Windows)
+          if(transformer.type() == ArgType.INT){
+            builder.movMR(transformer.from(), transformer.to(), transformer.toOffset());
+          }
+          else{ // should be FP
+            builder.cast(SSEAsmBuilder.class)
+                   .movqMR(transformer.from(), transformer.to(), transformer.toOffset());
+          }
         }
       }
 
