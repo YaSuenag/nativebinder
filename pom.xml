@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-Copyright (C) 2024, Yasumasa Suenaga
+Copyright (C) 2024, 2025, Yasumasa Suenaga
 
 This file is part of nativebinder.
 
@@ -40,7 +40,7 @@ along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
         <maven.compiler.target>22</maven.compiler.target>
     </properties>
 
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 
     <repositories>
         <repository>
