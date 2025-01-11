@@ -84,8 +84,19 @@ public abstract class NativeBinder{
    * @param type argument type
    */
   public static record Transformer(Register from, OptionalInt fromOffset, Register to, OptionalInt toOffset, ArgType type){
+
     public Transformer(Register from, Register to, ArgType type){
       this(from, OptionalInt.empty(), to, OptionalInt.empty(), type);
+    }
+
+    @Override
+    public String toString(){
+      String result = fromOffset.isEmpty() ? from.toString()
+                                           : String.format("%d(%s)", fromOffset.getAsInt(), from.toString());
+      result += " -> ";
+      result += toOffset.isEmpty() ? to.toString()
+                                   : String.format("%d(%s)", toOffset.getAsInt(), to.toString());
+      return result;
     }
   }
 
