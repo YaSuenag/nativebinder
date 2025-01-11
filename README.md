@@ -49,7 +49,7 @@ private void bind() throws Throwable{
   var bindMethods = new NativeBinder.BindMethod[]{bindMethod};
   var binder = NativeBinder.getInstance();
   binder.bind(this.getClass(), bindMethods);
-  }
+}
 ```
 
 # License
