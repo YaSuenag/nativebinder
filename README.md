@@ -21,10 +21,7 @@ Native Binder generates stub code dynamically to remove top of 2 arguments - `JN
 # Supported platform
 
 * Linux AMD64
-* Windows x64 (experimental)
-
-> [!CAUTION]
-> Windows x64 support is experimental. It might not work especially number of arguments are more than 12.
+* Windows x64
 
 # How to build
 
