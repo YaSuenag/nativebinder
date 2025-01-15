@@ -45,10 +45,14 @@ public class WindowsNativeBinder extends NativeBinder{
                                               };
 
   @Override
-  protected ArgTransformRule createArgTransformRule(Method method){
+  protected Transformer[] createArgTransformRule(Method method){
+    // TODO
+    return null;
+  }
+
+  private Object createArgTransformRule_old(Method method){
     var argTypes = method.getParameterTypes();
     var argStackSize = (argTypes.length <= 4) ? 32 /* reg param stack */ : (argTypes.length * 8);
-    var alignedArgStackSize = alignTo16Bytes(argStackSize);
 
     int fromStackOffset = 48; // RBP + (saved RBP) + (return address) + (reg param stack (8 bytes * 4 registers))
     int toStackOffset = 32; // reg param stack (8 bytes * 4 registers)
@@ -81,21 +85,7 @@ public class WindowsNativeBinder extends NativeBinder{
 
     }
 
-    return new ArgTransformRule(transformers.toArray(new Transformer[0]), alignedArgStackSize);
-  }
-
-  @Override
-  protected void addPrologue(AMD64AsmBuilder builder){
-    builder.push(Register.RBP)                                      /* push %rbp      */
-           .movMR(Register.RSP, Register.RBP, OptionalInt.empty())  /* mov %rsp, %rbp */
-           .movMR(Register.RCX, Register.RBP, OptionalInt.of(16))   /* mov %rsp, 16(%rbp) */
-           .movMR(Register.RDX, Register.RBP, OptionalInt.of(24));  /* mov %rsp, 24(%rbp) */
-  }
-
-  @Override
-  protected void addEpilogue(AMD64AsmBuilder builder){
-    builder.leave()  /* leave */
-           .ret();   /* ret   */
+    return transformers.toArray(new Transformer[0]);
   }
 
   @Override

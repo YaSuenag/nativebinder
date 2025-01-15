@@ -101,20 +101,12 @@ public abstract class NativeBinder{
   }
 
   /**
-   * Record to store the rule of transformation.
-   *
-   * @param transformers set of argument transformation rules.
-   * @param alignedArgStackSize argument stack size aligned with 16 bytes.
-   */
-  public static record ArgTransformRule(Transformer[] transformers, long alignedArgStackSize){};
-
-  /**
    * Create transformation rule.
    *
    * @param method to create rule
    * @return transformation ruleset
    */
-  protected abstract ArgTransformRule createArgTransformRule(Method method);
+  protected abstract Transformer[] createArgTransformRule(Method method);
 
   private static void init() throws PlatformException, UnsupportedPlatformException{
     if(seg == null){
@@ -152,20 +144,6 @@ public abstract class NativeBinder{
   }
 
   /**
-   * Add prologue assembly code.
-   *
-   * @param builder instance to add.
-   */
-  protected abstract void addPrologue(AMD64AsmBuilder builder);
-
-  /**
-   * Add epilogue assembly code.
-   *
-   * @param builder instance to add.
-   */
-  protected abstract void addEpilogue(AMD64AsmBuilder builder);
-
-  /**
    * Get XMM volatile register.
    *
    * @return volatile register (XMM)
@@ -198,17 +176,6 @@ public abstract class NativeBinder{
   }
 
   /**
-   * Align the value with 16 bytes.
-   *
-   * @param value to align
-   * @return value aligned with 16 bytes
-   */
-  protected long alignTo16Bytes(long value){
-    return ((value & 0xf) == 0) ? value
-                                : (value + 0x10) & 0xfffffffffffffff0L;
-  }
-
-  /**
    * Bind C functions to JNI methods.
    *
    * @param targetClass to hold JNI methods
@@ -221,12 +188,7 @@ public abstract class NativeBinder{
       var rule = createArgTransformRule(bindMethod.method());
 
       var builder = AMD64AsmBuilder.create(SSEAsmBuilder.class, seg);
-      addPrologue(builder);
-      if(rule.alignedArgStackSize > 0){
-        builder.sub(Register.RSP, (int)rule.alignedArgStackSize, OptionalInt.empty());
-      }
-
-      for(var transformer : rule.transformers()){
+      for(var transformer : rule){
         if(transformer.fromOffset().isEmpty() && transformer.toOffset().isEmpty()){
           // reg to reg
           if(transformer.type() == ArgType.INT){
@@ -273,10 +235,10 @@ public abstract class NativeBinder{
       }
 
       builder.movImm(Register.R10, bindMethod.seg().address())
-             .call(Register.R10);
-      addEpilogue(builder);
+             .jmp(Register.R10);
 
-      var stubSeg = builder.getMemorySegment("stub_" + bindMethod.method().getName());
+      var stubName = "stub_" + bindMethod.method().getName();
+      var stubSeg = builder.getMemorySegment(stubName);
       methodMap.put(bindMethod.method(), stubSeg);
     }
 
