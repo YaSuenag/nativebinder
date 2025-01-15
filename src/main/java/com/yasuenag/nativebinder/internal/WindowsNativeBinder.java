@@ -46,16 +46,10 @@ public class WindowsNativeBinder extends NativeBinder{
 
   @Override
   protected Transformer[] createArgTransformRule(Method method){
-    // TODO
-    return null;
-  }
-
-  private Object createArgTransformRule_old(Method method){
     var argTypes = method.getParameterTypes();
-    var argStackSize = (argTypes.length <= 4) ? 32 /* reg param stack */ : (argTypes.length * 8);
 
-    int fromStackOffset = 48; // RBP + (saved RBP) + (return address) + (reg param stack (8 bytes * 4 registers))
-    int toStackOffset = 32; // reg param stack (8 bytes * 4 registers)
+    int fromStackOffset = 40; // RSP + (return address) + (reg param stack (8 bytes * 4 registers))
+    int toStackOffset = 40; // RSP + (return address) + (reg param stack (8 bytes * 4 registers))
     var transformers = new ArrayList<Transformer>();
 
     for(int i = 0; i < argTypes.length; i++){
@@ -65,18 +59,14 @@ public class WindowsNativeBinder extends NativeBinder{
         var fromReg = isIntegerClass(type) ? intArgRegs[i + 2] : fpArgRegs[i + 2];
         var toReg = isIntegerClass(type) ? intArgRegs[i] : fpArgRegs[i];
         transformers.add(new Transformer(fromReg, toReg, argType));
-
-        // Copy to reg param stack
-        // Both arg1 and 2 are copied at prologue.
-        transformers.add(new Transformer(toReg, OptionalInt.empty(), Register.RBP, OptionalInt.of(0x10 + (8 * (i + 2))), argType));
       }
       else{
         if(i < 4){ // mem-reg
           var toReg = isIntegerClass(type) ? intArgRegs[i] : fpArgRegs[i];
-          transformers.add(new Transformer(Register.RBP, OptionalInt.of(fromStackOffset), toReg, OptionalInt.empty(), argType));
+          transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), toReg, OptionalInt.empty(), argType));
         }
         else{ // mem-mem
-          transformers.add(new Transformer(Register.RBP, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), argType));
+          transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), argType));
           toStackOffset += 8;
         }
 
