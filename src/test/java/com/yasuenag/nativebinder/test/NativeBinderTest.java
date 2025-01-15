@@ -30,6 +30,7 @@ import com.yasuenag.ffmasm.amd64.Register;
 
 import com.yasuenag.nativebinder.NativeBinder;
 import com.yasuenag.nativebinder.internal.LinuxNativeBinder;
+import com.yasuenag.nativebinder.internal.WindowsNativeBinder;
 
 
 public class NativeBinderTest extends NativeBinder{
@@ -49,6 +50,13 @@ public class NativeBinderTest extends NativeBinder{
   public void testGetInstanceOnLinux() throws Exception{
     var inst = NativeBinderTest.getInstance();
     Assertions.assertEquals(LinuxNativeBinder.class, inst.getClass());
+  }
+
+  @Test
+  @EnabledOnOs(OS.WINDOWS)
+  public void testGetInstanceOnWindows() throws Exception{
+    var inst = NativeBinderTest.getInstance();
+    Assertions.assertEquals(WindowsNativeBinder.class, inst.getClass());
   }
 
   @Test
