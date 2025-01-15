@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Yasumasa Suenaga
+ * Copyright (C) 2024, 2025, Yasumasa Suenaga
  *
  * This file is part of nativebinder.
  *
@@ -35,17 +35,7 @@ import com.yasuenag.nativebinder.internal.LinuxNativeBinder;
 public class NativeBinderTest extends NativeBinder{
 
   @Override
-  protected ArgTransformRule createArgTransformRule(Method method){
-    throw new RuntimeException("Not implemented");
-  }
-
-  @Override
-  protected void addPrologue(AMD64AsmBuilder builder){
-    throw new RuntimeException("Not implemented");
-  }
-
-  @Override
-  protected void addEpilogue(AMD64AsmBuilder builder){
+  protected Transformer[] createArgTransformRule(Method method){
     throw new RuntimeException("Not implemented");
   }
 
@@ -87,12 +77,6 @@ public class NativeBinderTest extends NativeBinder{
     Assertions.assertFalse(isFloatingPointClass(int.class));
     Assertions.assertFalse(isFloatingPointClass(long.class));
     Assertions.assertFalse(isFloatingPointClass(Object.class));
-  }
-
-  @Test
-  public void testAlignTo16Bytes(){
-    Assertions.assertEquals(0xfff0L, alignTo16Bytes(0xffe8L));
-    Assertions.assertEquals(0xfff0L, alignTo16Bytes(0xfff0L));
   }
 
 }

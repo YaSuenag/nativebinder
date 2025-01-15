@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Yasumasa Suenaga
+ * Copyright (C) 2024, 2025, Yasumasa Suenaga
  *
  * This file is part of nativebinder.
  *
@@ -40,37 +40,14 @@ public class LinuxNativeBinder extends NativeBinder{
 
   private static final int FP_ARGREG_LIMIT = 8; // xmm0 - xmm7
 
-  private int calculateArgStackSize(Class<?>[] argTypes){
-    int numIntParamOnStack = -intArgRegs.length;
-    int numFPParamOnStack  = -FP_ARGREG_LIMIT;
-
-    for(var type : argTypes){
-      if(isIntegerClass(type)){
-        numIntParamOnStack++;
-      }
-      else if(isFloatingPointClass(type)){
-        numFPParamOnStack++;
-      }
-      else{
-        throw new IllegalArgumentException("Unsupported argument type: " + type.getName());
-      }
-    }
-
-    int numParamOnStack = ((numIntParamOnStack > 0) ? numIntParamOnStack : 0) +
-                          ((numFPParamOnStack > 0) ? numFPParamOnStack : 0);
-    return numParamOnStack * 8;
-  }
-
   @Override
-  protected ArgTransformRule createArgTransformRule(Method method){
+  protected Transformer[] createArgTransformRule(Method method){
     var argTypes = method.getParameterTypes();
-    var argStackSize = calculateArgStackSize(argTypes);
-    var alignedArgStackSize = alignTo16Bytes(argStackSize);
 
     int intArgs = 0;
     int fpArgs = 0;
-    int fromStackOffset = 16; // RBP + (saved RBP) + (return address)
-    int toStackOffset = 0;
+    int fromStackOffset = 8; // RSP + (return address)
+    int toStackOffset = 8; // RSP + (return address)
     var transformers = new ArrayList<Transformer>();
 
     for(int i = 0; i < argTypes.length; i++){
@@ -81,10 +58,10 @@ public class LinuxNativeBinder extends NativeBinder{
         }
         else{
           if(intArgs < intArgRegs.length){
-            transformers.add(new Transformer(Register.RBP, OptionalInt.of(fromStackOffset), intArgRegs[intArgs], OptionalInt.empty(), ArgType.INT));
+            transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), intArgRegs[intArgs], OptionalInt.empty(), ArgType.INT));
           }
           else{
-            transformers.add(new Transformer(Register.RBP, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), ArgType.INT));
+            transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), ArgType.INT));
             toStackOffset += 8;
           }
           fromStackOffset += 8;
@@ -93,7 +70,9 @@ public class LinuxNativeBinder extends NativeBinder{
       }
       else if(isFloatingPointClass(type)){
         if(fpArgs >= FP_ARGREG_LIMIT){
-          transformers.add(new Transformer(Register.RBP, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), ArgType.FP));
+          if(fromStackOffset != toStackOffset){
+            transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), ArgType.FP));
+          }
           fromStackOffset += 8;
           toStackOffset += 8;
         }
@@ -104,19 +83,7 @@ public class LinuxNativeBinder extends NativeBinder{
       }
     }
 
-    return new ArgTransformRule(transformers.toArray(new Transformer[0]), alignedArgStackSize);
-  }
-
-  @Override
-  protected void addPrologue(AMD64AsmBuilder builder){
-    builder.push(Register.RBP)                                       /* push %rbp      */
-           .movMR(Register.RSP, Register.RBP, OptionalInt.empty());  /* mov %rsp, %rbp */ 
-  }
-
-  @Override
-  protected void addEpilogue(AMD64AsmBuilder builder){
-    builder.leave()  /* leave */
-           .ret();   /* ret   */
+    return transformers.toArray(new Transformer[0]);
   }
 
   @Override
