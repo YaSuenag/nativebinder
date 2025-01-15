@@ -70,7 +70,9 @@ public class LinuxNativeBinder extends NativeBinder{
       }
       else if(isFloatingPointClass(type)){
         if(fpArgs >= FP_ARGREG_LIMIT){
-          transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), ArgType.FP));
+          if(fromStackOffset != toStackOffset){
+            transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), ArgType.FP));
+          }
           fromStackOffset += 8;
           toStackOffset += 8;
         }
