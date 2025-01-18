@@ -18,7 +18,9 @@
  */
 package com.yasuenag.nativebinder;
 
+import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.lang.ref.Cleaner;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -29,6 +31,7 @@ import com.yasuenag.ffmasm.NativeRegister;
 import com.yasuenag.ffmasm.PlatformException;
 import com.yasuenag.ffmasm.UnsupportedPlatformException;
 import com.yasuenag.ffmasm.amd64.AMD64AsmBuilder;
+import com.yasuenag.ffmasm.amd64.AVXAsmBuilder;
 import com.yasuenag.ffmasm.amd64.Register;
 import com.yasuenag.ffmasm.amd64.SSEAsmBuilder;
 
@@ -72,6 +75,8 @@ public abstract class NativeBinder{
 
   private static CodeSegment seg = null;
 
+  private static boolean isAVX;
+
   /**
    * Record to store the rule of argument transformation.
    *
@@ -114,6 +119,25 @@ public abstract class NativeBinder{
       var action = new CodeSegment.CleanerAction(seg);
       Cleaner.create()
              .register(NativeBinder.class, action);
+
+      var desc = FunctionDescriptor.of(ValueLayout.JAVA_INT);
+      var cpuid = AMD64AsmBuilder.create(AMD64AsmBuilder.class, seg, desc)
+          /* push %rbp        */ .push(Register.RBP)
+          /* mov  %rsp, %rbp  */ .movMR(Register.RSP, Register.RBP, OptionalInt.empty())
+          /* mov  %rax, $0x01 */ .movImm(Register.RAX, 0x01L)
+          /* cpuid            */ .cpuid()
+          /* mov  %rcx, %rax  */ .movMR(Register.RCX, Register.RAX, OptionalInt.empty())
+          /* leave            */ .leave()
+          /* ret              */ .ret()
+                                 .build("cpuid");
+      try{
+        int ecx = (int)cpuid.invoke();
+        isAVX = ((ecx >>> 28) & 1) == 1;
+      }
+      catch(Throwable t){
+        throw new RuntimeException(t);
+      }
+
     }
   }
 
@@ -187,7 +211,15 @@ public abstract class NativeBinder{
     for(var bindMethod : bindMethods){
       var rule = createArgTransformRule(bindMethod.method());
 
-      var builder = AMD64AsmBuilder.create(SSEAsmBuilder.class, seg);
+      AMD64AsmBuilder builder;
+      if(isAVX){
+        builder = AMD64AsmBuilder.create(AVXAsmBuilder.class, seg)
+                                 .vzeroupper();
+      }
+      else{
+        builder = AMD64AsmBuilder.create(SSEAsmBuilder.class, seg);
+      }
+
       for(var transformer : rule){
         if(transformer.fromOffset().isEmpty() && transformer.toOffset().isEmpty()){
           // reg to reg
