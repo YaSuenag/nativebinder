@@ -223,14 +223,7 @@ public abstract class NativeBinder{
           }
         }
         else{
-          // reg to mem (for Windows)
-          if(transformer.type() == ArgType.INT){
-            builder.movMR(transformer.from(), transformer.to(), transformer.toOffset());
-          }
-          else{ // should be FP
-            builder.cast(SSEAsmBuilder.class)
-                   .movqMR(transformer.from(), transformer.to(), transformer.toOffset());
-          }
+          throw new IllegalStateException("Should not be reg-mem");
         }
       }
 
