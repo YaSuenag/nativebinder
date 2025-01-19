@@ -20,6 +20,8 @@
 
 #ifdef __linux__
 #include <errno.h>
+#elif defined __WIN64__
+#include <windows.h>
 #endif
 
 void intManyArgs(char a1,
@@ -51,6 +53,8 @@ void intManyArgs(char a1,
 
 #ifdef __linux__
   errno = 100;
+#elif defined __WIN64__
+  SetLastError(100);
 #endif
 }
 
@@ -91,6 +95,8 @@ void fpManyArgs(float a1,
 
 #ifdef __linux__
   errno = 200;
+#elif defined __WIN64__
+  SetLastError(200);
 #endif
 }
 
@@ -135,5 +141,7 @@ void mixManyArgs(char a1,
 
 #ifdef __linux__
   errno = 300;
+#elif defined __WIN64__
+  SetLastError(300);
 #endif
 }

@@ -18,6 +18,9 @@
  */
 package com.yasuenag.nativebinder.internal;
 
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.SymbolLookup;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.OptionalInt;
@@ -44,12 +47,17 @@ public class WindowsNativeBinder extends NativeBinder{
                                                   Register.XMM3
                                               };
 
-  @Override
-  protected Transformer[] createArgTransformRule(Method method, boolean isJMP){
+  private static final MemorySegment getLastError;
+
+  static{
+    getLastError = SymbolLookup.libraryLookup("Kernel32", Arena.global())
+                               .find("GetLastError")
+                               .get();
+  }
+
+  private Transformer[] createArgTransformRuleInner(Method method, Register fromBaseReg, int fromStackOffset, int toStackOffset){
     var argTypes = method.getParameterTypes();
 
-    int fromStackOffset = 40; // RSP + (return address) + (reg param stack (8 bytes * 4 registers))
-    int toStackOffset = 40; // RSP + (return address) + (reg param stack (8 bytes * 4 registers))
     var transformers = new ArrayList<Transformer>();
 
     for(int i = 0; i < argTypes.length; i++){
@@ -63,10 +71,10 @@ public class WindowsNativeBinder extends NativeBinder{
       else{
         if(i < 4){ // mem-reg
           var toReg = isIntegerClass(type) ? intArgRegs[i] : fpArgRegs[i];
-          transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), toReg, OptionalInt.empty(), argType));
+          transformers.add(new Transformer(fromBaseReg, OptionalInt.of(fromStackOffset), toReg, OptionalInt.empty(), argType));
         }
         else{ // mem-mem
-          transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), argType));
+          transformers.add(new Transformer(fromBaseReg, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), argType));
           toStackOffset += 8;
         }
 
@@ -79,9 +87,26 @@ public class WindowsNativeBinder extends NativeBinder{
   }
 
   @Override
+  protected Transformer[] createArgTransformRule(Method method, boolean isJMP){
+    if(isJMP){
+      return createArgTransformRuleInner(method, Register.RSP, 40 /* RSP + (return address) + (reg param stack (8 bytes * 4 registers)) */, 40 /* RSP + (return address) + (reg param stack (8 bytes * 4 registers)) */);
+    }
+    else{
+      return createArgTransformRuleInner(method, Register.RBP, 48 /* RSP + (return address) + (reg param stack (8 bytes * 4 registers)) */, 32 /* reg param stack (8 bytes * 4 registers) */);
+    }
+
+  }
+
+  @Override
   protected AMD64AsmBuilder obtainErrorCode(AMD64AsmBuilder builder){
-    // TODO
-    return null;
+    return builder.sub(Register.RSP, 48, OptionalInt.empty()) // reg param stack + aligned stack (16 bytes)
+                  .movMR(Register.RAX, Register.RSP, OptionalInt.of(32)) // evacuate original return val
+                  .movImm(Register.R10, getLastError.address())
+                  .call(Register.R10) // get error code
+                  .movRM(Register.EDI, Register.EAX, OptionalInt.empty())
+                  .movImm(Register.R10, ptrErrorCodeCallback.address())
+                  .call(Register.R10)
+                  .movRM(Register.RAX, Register.RSP, OptionalInt.of(32)); // restore original return val
   }
 
   @Override

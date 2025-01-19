@@ -337,14 +337,17 @@ public abstract class NativeBinder{
     for(var bindMethod : bindMethods){
       var klass = isAVX ? AVXAsmBuilder.class : SSEAsmBuilder.class;
       // Stack size is estimated a max value.
-      int stackSize = 8 * (bindMethod.method().getParameterTypes().length - 2);
+      int stackSize = 8 * bindMethod.method().getParameterTypes().length;
+      if(stackSize < 32){  // for Windows reg param stack
+        stackSize = 32;
+      }
       int alignedStackSize = ((stackSize & 0xf) == 0) ? stackSize
                                                       : (stackSize + 0x10) & 0xfffffff0;
 
       var builder = AMD64AsmBuilder.create(klass, seg)
 /* push %rbp                    */ .push(Register.RBP)
 /* mov %rsp,               %rbp */ .movMR(Register.RSP, Register.RBP, OptionalInt.empty())
-/* sub <alignedStackSize?, %rsp */ .sub(Register.RSP, alignedStackSize, OptionalInt.empty());
+/* sub <alignedStackSize>, %rsp */ .sub(Register.RSP, alignedStackSize, OptionalInt.empty());
 
       if(isAVX){
         builder.cast(AVXAsmBuilder.class)

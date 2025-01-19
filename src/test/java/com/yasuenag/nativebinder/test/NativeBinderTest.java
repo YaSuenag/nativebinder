@@ -110,6 +110,8 @@ public class NativeBinderTest extends NativeBinder{
 
   @Test
   public void testErrorCode() throws Throwable{
+    getInstance(); // Initialize ptrErrorCodeCallback
+
     var desc = FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT);
     var callback = Linker.nativeLinker()
                          .downcallHandle(NativeBinder.ptrErrorCodeCallback, desc);
