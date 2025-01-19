@@ -73,9 +73,9 @@ public class WindowsNativeBinderTest extends WindowsNativeBinder{
   }
 
   @Test
-  void testIntManyArgs(){
+  void testIntManyArgsWithJMP(){
     var targetMethod = getTargetMethod("intManyArgs");
-    var rule = createArgTransformRule(targetMethod);
+    var rule = createArgTransformRule(targetMethod, true);
 
     Assertions.assertEquals(6, rule.length);
 
@@ -123,9 +123,9 @@ public class WindowsNativeBinderTest extends WindowsNativeBinder{
   }
 
   @Test
-  void testFPManyArgs(){
+  void testFPManyArgsWithJMP(){
     var targetMethod = getTargetMethod("fpManyArgs");
-    var rule = createArgTransformRule(targetMethod);
+    var rule = createArgTransformRule(targetMethod, true);
 
     Assertions.assertEquals(6, rule.length);
 
@@ -173,9 +173,9 @@ public class WindowsNativeBinderTest extends WindowsNativeBinder{
   }
 
   @Test
-  void testMixManyArgs(){
+  void testMixManyArgsWithJMP(){
     var targetMethod = getTargetMethod("mixManyArgs");
-    var rule = createArgTransformRule(targetMethod);
+    var rule = createArgTransformRule(targetMethod, true);
 
     Assertions.assertEquals(12, rule.length);
 

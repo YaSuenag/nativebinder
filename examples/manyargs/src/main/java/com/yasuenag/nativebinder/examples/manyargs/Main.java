@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Yasumasa Suenaga
+ * Copyright (C) 2024, 2025, Yasumasa Suenaga
  *
  * This file is part of nativebinder.
  *
@@ -83,7 +83,7 @@ public class Main{
     lookup = SymbolLookup.loaderLookup();
   }
 
-  private void bind() throws Throwable{
+  private void bind(boolean withErrorCode) throws Throwable{
     var cls = this.getClass();
     var clsMethods = cls.getMethods();
     Method methodIntManyArgs = null;
@@ -111,21 +111,37 @@ public class Main{
                       };
 
     var binder = NativeBinder.getInstance();
-    binder.bind(cls, bindMethods);
+    if(withErrorCode){
+      binder.bindWithErrorCode(cls, bindMethods);
+    }
+    else{
+      binder.bind(cls, bindMethods);
+    }
   }
 
   public static void main(String[] args) throws Throwable{
+    boolean withErrorCode = (args.length == 1) && args[0].equals("--with-errcode");
     var inst = new Main();
-    inst.bind();
+    inst.bind(withErrorCode);
 
     inst.intManyArgs(true, (byte)2, (char)3, (short)4, 5, 6L,
                      false, (byte)8, (char)9, (short)10, 11, 12L);
+    if(withErrorCode){
+      System.out.println("errno = " + NativeBinder.errorCodeInPreviousCall());
+    }
 
     inst.fpManyArgs(0.1f, 0.2d, 0.3f, 0.4d, 0.5f, 0.6d, 0.7f, 0.8d,
                     0.9f, 1.0d, 1.1f, 1.2d, 1.3f, 1.4d, 1.5f, 1.6d);
+    if(withErrorCode){
+      System.out.println("errno = " + NativeBinder.errorCodeInPreviousCall());
+    }
 
     inst.mixManyArgs(true, 0.2f, (char)3, 0.4d, 5, 0.6f, 7L, 0.8d, (byte)9,
                      1.0f, (short)11, 1.2d, false, 1.4f, (short)15, 1.6d, 17, 1.8f);
+    if(withErrorCode){
+      System.out.println("errno = " + NativeBinder.errorCodeInPreviousCall());
+    }
+
   }
 
 }

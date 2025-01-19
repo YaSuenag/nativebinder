@@ -86,6 +86,24 @@ along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
                             </arguments>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>run-with-errcode</id>
+                        <phase>exec</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${java.home}/bin/java</executable>
+                            <arguments>
+                                <argument>-classpath</argument>
+                                <classpath/>
+                                <argument>-Djava.library.path=${project.build.directory}</argument>
+                                <argument>--enable-native-access=ALL-UNNAMED</argument>
+                                <argument>com.yasuenag.nativebinder.examples.manyargs.Main</argument>
+                                <argument>--with-errcode</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

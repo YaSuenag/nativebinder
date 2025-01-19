@@ -45,7 +45,7 @@ public class WindowsNativeBinder extends NativeBinder{
                                               };
 
   @Override
-  protected Transformer[] createArgTransformRule(Method method){
+  protected Transformer[] createArgTransformRule(Method method, boolean isJMP){
     var argTypes = method.getParameterTypes();
 
     int fromStackOffset = 40; // RSP + (return address) + (reg param stack (8 bytes * 4 registers))
@@ -76,6 +76,12 @@ public class WindowsNativeBinder extends NativeBinder{
     }
 
     return transformers.toArray(new Transformer[0]);
+  }
+
+  @Override
+  protected AMD64AsmBuilder obtainErrorCode(AMD64AsmBuilder builder){
+    // TODO
+    return null;
   }
 
   @Override

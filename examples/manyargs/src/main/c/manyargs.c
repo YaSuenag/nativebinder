@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Yasumasa Suenaga
+ * Copyright (C) 2024, 2025, Yasumasa Suenaga
  *
  * This file is part of nativebinder.
  *
@@ -17,6 +17,10 @@
  * along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
  */
 #include <stdio.h>
+
+#ifdef __linux__
+#include <errno.h>
+#endif
 
 void intManyArgs(char a1,
                  char a2,
@@ -44,6 +48,10 @@ void intManyArgs(char a1,
   printf("  a11 = %d\n", a11);
   printf("  a12 = %ld\n", a12);
   printf("\n");
+
+#ifdef __linux__
+  errno = 100;
+#endif
 }
 
 void fpManyArgs(float a1,
@@ -80,6 +88,10 @@ void fpManyArgs(float a1,
   printf("  a15 = %f\n", a15);
   printf("  a16 = %lf\n", a16);
   printf("\n");
+
+#ifdef __linux__
+  errno = 200;
+#endif
 }
 
 void mixManyArgs(char a1,
@@ -120,4 +132,8 @@ void mixManyArgs(char a1,
   printf("  a17 = %d\n", a17);
   printf("  a18 = %f\n", a18);
   printf("\n");
+
+#ifdef __linux__
+  errno = 300;
+#endif
 }
