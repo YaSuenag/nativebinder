@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Yasumasa Suenaga
+ * Copyright (C) 2024, 2025, Yasumasa Suenaga
  *
  * This file is part of nativebinder.
  *
@@ -18,18 +18,24 @@
  */
 #include <stdio.h>
 
-void intManyArgs(char a1,
-                 char a2,
-                 short a3,
-                 short a4,
-                 int a5,
-                 long a6,
-                 char a7,
-                 char a8,
-                 short a9,
-                 short a10,
-                 int a11,
-                 long a12){
+#ifdef __linux__
+#include <errno.h>
+#elif defined __WIN64__
+#include <windows.h>
+#endif
+
+int intManyArgs(char a1,
+                char a2,
+                short a3,
+                short a4,
+                int a5,
+                long a6,
+                char a7,
+                char a8,
+                short a9,
+                short a10,
+                int a11,
+                long a12){
   printf("intManyArgs:\n");
   printf("   a1 = %hhd\n", a1);
   printf("   a2 = %hhd\n", a2);
@@ -44,24 +50,32 @@ void intManyArgs(char a1,
   printf("  a11 = %d\n", a11);
   printf("  a12 = %ld\n", a12);
   printf("\n");
+
+#ifdef __linux__
+  errno = 100;
+#elif defined __WIN64__
+  SetLastError(100);
+#endif
+
+  return 1;
 }
 
-void fpManyArgs(float a1,
-                double a2,
-                float a3,
-                double a4,
-                float a5,
-                double a6,
-                float a7,
-                double a8,
-                float a9,
-                double a10,
-                float a11,
-                double a12,
-                float a13,
-                double a14,
-                float a15,
-                double a16){
+int fpManyArgs(float a1,
+               double a2,
+               float a3,
+               double a4,
+               float a5,
+               double a6,
+               float a7,
+               double a8,
+               float a9,
+               double a10,
+               float a11,
+               double a12,
+               float a13,
+               double a14,
+               float a15,
+               double a16){
   printf("fpManyArgs:\n");
   printf("   a1 = %f\n", a1);
   printf("   a2 = %lf\n", a2);
@@ -80,26 +94,34 @@ void fpManyArgs(float a1,
   printf("  a15 = %f\n", a15);
   printf("  a16 = %lf\n", a16);
   printf("\n");
+
+#ifdef __linux__
+  errno = 200;
+#elif defined __WIN64__
+  SetLastError(200);
+#endif
+
+  return 2;
 }
 
-void mixManyArgs(char a1,
-                 float a2,
-                 short a3,
-                 double a4,
-                 int a5,
-                 float a6,
-                 long a7,
-                 double a8,
-                 char a9,
-                 float a10,
-                 short a11,
-                 double a12,
-                 char a13,
-                 float a14,
-                 short a15,
-                 double a16,
-                 int a17,
-                 float a18){
+int mixManyArgs(char a1,
+                float a2,
+                short a3,
+                double a4,
+                int a5,
+                float a6,
+                long a7,
+                double a8,
+                char a9,
+                float a10,
+                short a11,
+                double a12,
+                char a13,
+                float a14,
+                short a15,
+                double a16,
+                int a17,
+                float a18){
   printf("mixManyArgs:\n");
   printf("   a1 = %hhd\n", a1);
   printf("   a2 = %f\n", a2);
@@ -120,4 +142,12 @@ void mixManyArgs(char a1,
   printf("  a17 = %d\n", a17);
   printf("  a18 = %f\n", a18);
   printf("\n");
+
+#ifdef __linux__
+  errno = 300;
+#elif defined __WIN64__
+  SetLastError(300);
+#endif
+
+  return 3;
 }

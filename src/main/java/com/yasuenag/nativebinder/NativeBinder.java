@@ -18,9 +18,13 @@
  */
 package com.yasuenag.nativebinder;
 
+import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
+import java.lang.foreign.Linker;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.ref.Cleaner;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -78,6 +82,13 @@ public abstract class NativeBinder{
   private static boolean isAVX;
 
   /**
+   * Function pointer of errorCodeCallback()
+   */
+  protected static MemorySegment ptrErrorCodeCallback = null;
+
+  private static final ThreadLocal<Integer> threadLocalErrorCode = new ThreadLocal<>();
+
+  /**
    * Record to store the rule of argument transformation.
    *
    * @param from register in JNI
@@ -109,9 +120,32 @@ public abstract class NativeBinder{
    * Create transformation rule.
    *
    * @param method to create rule
+   * @param isJMP true if the stub should be generated with JMP operation.
    * @return transformation ruleset
    */
-  protected abstract Transformer[] createArgTransformRule(Method method);
+  protected abstract Transformer[] createArgTransformRule(Method method, boolean isJMP);
+
+  /**
+   * Generate machine code to obtain error code (errno in Linux, GetLastError() in Windows)
+   *
+   * @param builder AMD64AsmBuilder instance for generating stub code.
+   * @return builder instance
+   */
+  protected abstract AMD64AsmBuilder obtainErrorCode(AMD64AsmBuilder builder);
+
+  private static void errorCodeCallback(int errcode){
+    threadLocalErrorCode.set(errcode);
+  }
+
+  /**
+   * Get error code in previous bind method call.
+   * Note that the method should be binded by bindWithErrorCode().
+   *
+   * @return error code in previous binded method call
+   */
+  public static int errorCodeInPreviousCall(){
+    return threadLocalErrorCode.get();
+  }
 
   private static void init() throws PlatformException, UnsupportedPlatformException{
     if(seg == null){
@@ -138,6 +172,19 @@ public abstract class NativeBinder{
         throw new RuntimeException(t);
       }
 
+    }
+
+    if(ptrErrorCodeCallback == null){
+      try{
+        var target = MethodHandles.lookup()
+                                  .findStatic(NativeBinder.class, "errorCodeCallback", MethodType.methodType(void.class, int.class));
+        var desc = FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT);
+        ptrErrorCodeCallback = Linker.nativeLinker()
+                                     .upcallStub(target, desc, Arena.ofAuto());
+      }
+      catch(NoSuchMethodException | IllegalAccessException e){
+        throw new RuntimeException(e);
+      }
     }
   }
 
@@ -199,6 +246,49 @@ public abstract class NativeBinder{
     return cls.equals(float.class) || cls.equals(double.class);
   }
 
+  private AMD64AsmBuilder bindInner(AMD64AsmBuilder builder, Transformer[] rule){
+    for(var transformer : rule){
+      if(transformer.fromOffset().isEmpty() && transformer.toOffset().isEmpty()){
+        // reg to reg
+        if(transformer.type() == ArgType.INT){
+          builder.movMR(transformer.from(), transformer.to(), OptionalInt.empty());
+        }
+        else{ // should be FP
+          builder.cast(SSEAsmBuilder.class)
+                 .movdqaMR(transformer.from(), transformer.to(), OptionalInt.empty());
+        }
+      }
+      else if(transformer.fromOffset().isPresent() && transformer.toOffset().isEmpty()){
+        // mem to reg
+        if(transformer.type() == ArgType.INT){
+          builder.movRM(transformer.to(), transformer.from(), transformer.fromOffset());
+        }
+        else{ // should be FP
+          builder.cast(SSEAsmBuilder.class)
+                 .movqRM(transformer.to(), transformer.from(), transformer.fromOffset());
+        }
+      }
+      else if(transformer.fromOffset().isPresent() && transformer.toOffset().isPresent()){
+        // mem to mem
+        if(transformer.type() == ArgType.INT){
+          builder.movRM(Register.R11, transformer.from(), transformer.fromOffset())
+                 .movMR(Register.R11, transformer.to(), transformer.toOffset());
+        }
+        else{ // should be PF
+          var tmpReg = xmmVolatileRegister();
+          builder.cast(SSEAsmBuilder.class)
+                 .movqRM(tmpReg, transformer.from(), transformer.fromOffset())
+                 .movqMR(tmpReg, transformer.to(), transformer.toOffset());
+        }
+      }
+      else{
+        throw new IllegalStateException("Should not be reg-mem");
+      }
+    }
+
+    return builder;
+  }
+
   /**
    * Bind C functions to JNI methods.
    *
@@ -209,7 +299,7 @@ public abstract class NativeBinder{
     var methodMap = new HashMap<Method, MemorySegment>();
 
     for(var bindMethod : bindMethods){
-      var rule = createArgTransformRule(bindMethod.method());
+      var rule = createArgTransformRule(bindMethod.method(), true);
 
       AMD64AsmBuilder builder;
       if(isAVX){
@@ -220,47 +310,60 @@ public abstract class NativeBinder{
         builder = AMD64AsmBuilder.create(SSEAsmBuilder.class, seg);
       }
 
-      for(var transformer : rule){
-        if(transformer.fromOffset().isEmpty() && transformer.toOffset().isEmpty()){
-          // reg to reg
-          if(transformer.type() == ArgType.INT){
-            builder.movMR(transformer.from(), transformer.to(), OptionalInt.empty());
-          }
-          else{ // should be FP
-            builder.cast(SSEAsmBuilder.class)
-                   .movdqaMR(transformer.from(), transformer.to(), OptionalInt.empty());
-          }
-        }
-        else if(transformer.fromOffset().isPresent() && transformer.toOffset().isEmpty()){
-          // mem to reg
-          if(transformer.type() == ArgType.INT){
-            builder.movRM(transformer.to(), transformer.from(), transformer.fromOffset());
-          }
-          else{ // should be FP
-            builder.cast(SSEAsmBuilder.class)
-                   .movqRM(transformer.to(), transformer.from(), transformer.fromOffset());
-          }
-        }
-        else if(transformer.fromOffset().isPresent() && transformer.toOffset().isPresent()){
-          // mem to mem
-          if(transformer.type() == ArgType.INT){
-            builder.movRM(Register.R11, transformer.from(), transformer.fromOffset())
-                   .movMR(Register.R11, transformer.to(), transformer.toOffset());
-          }
-          else{ // should be PF
-            var tmpReg = xmmVolatileRegister();
-            builder.cast(SSEAsmBuilder.class)
-                   .movqRM(tmpReg, transformer.from(), transformer.fromOffset())
-                   .movqMR(tmpReg, transformer.to(), transformer.toOffset());
-          }
-        }
-        else{
-          throw new IllegalStateException("Should not be reg-mem");
-        }
-      }
+      bindInner(builder, rule);
 
       builder.movImm(Register.R10, bindMethod.seg().address())
              .jmp(Register.R10);
+
+      var stubName = "stub_" + bindMethod.method().getName();
+      var stubSeg = builder.getMemorySegment(stubName);
+      methodMap.put(bindMethod.method(), stubSeg);
+    }
+
+    var register = NativeRegister.create(targetClass);
+    register.registerNatives(methodMap);
+  }
+
+  /**
+   * Bind C functions to JNI methods.
+   * Error code (errno in Linux, GetLastError() in Windows) can be obtained.
+   *
+   * @param targetClass to hold JNI methods
+   * @param bindMethods array of binding information
+   */
+  public void bindWithErrorCode(Class<?> targetClass, BindMethod[] bindMethods) throws Throwable{
+    var methodMap = new HashMap<Method, MemorySegment>();
+
+    for(var bindMethod : bindMethods){
+      var klass = isAVX ? AVXAsmBuilder.class : SSEAsmBuilder.class;
+      // Stack size is estimated a max value.
+      int stackSize = 8 * bindMethod.method().getParameterTypes().length;
+      if(stackSize < 32){  // for Windows reg param stack
+        stackSize = 32;
+      }
+      int alignedStackSize = ((stackSize & 0xf) == 0) ? stackSize
+                                                      : (stackSize + 0x10) & 0xfffffff0;
+
+      var builder = AMD64AsmBuilder.create(klass, seg)
+/* push %rbp                    */ .push(Register.RBP)
+/* mov %rsp,               %rbp */ .movMR(Register.RSP, Register.RBP, OptionalInt.empty())
+/* sub <alignedStackSize>, %rsp */ .sub(Register.RSP, alignedStackSize, OptionalInt.empty());
+
+      if(isAVX){
+        builder.cast(AVXAsmBuilder.class)
+               .vzeroupper();
+      }
+
+      var rule = createArgTransformRule(bindMethod.method(), false);
+      bindInner(builder, rule);
+
+      builder.movImm(Register.R10, bindMethod.seg().address())
+             .call(Register.R10);
+
+      obtainErrorCode(builder);
+
+      builder.leave()
+             .ret();
 
       var stubName = "stub_" + bindMethod.method().getName();
       var stubSeg = builder.getMemorySegment(stubName);

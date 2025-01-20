@@ -17,6 +17,11 @@
  */
 package com.yasuenag.nativebinder.test;
 
+import java.lang.foreign.FunctionDescriptor;
+import java.lang.foreign.Linker;
+import java.lang.foreign.Linker;
+import java.lang.foreign.ValueLayout;
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
@@ -36,7 +41,12 @@ import com.yasuenag.nativebinder.internal.WindowsNativeBinder;
 public class NativeBinderTest extends NativeBinder{
 
   @Override
-  protected Transformer[] createArgTransformRule(Method method){
+  protected Transformer[] createArgTransformRule(Method method, boolean isJMP){
+    throw new RuntimeException("Not implemented");
+  }
+
+  @Override
+  protected AMD64AsmBuilder obtainErrorCode(AMD64AsmBuilder builder){
     throw new RuntimeException("Not implemented");
   }
 
@@ -85,6 +95,35 @@ public class NativeBinderTest extends NativeBinder{
     Assertions.assertFalse(isFloatingPointClass(int.class));
     Assertions.assertFalse(isFloatingPointClass(long.class));
     Assertions.assertFalse(isFloatingPointClass(Object.class));
+  }
+
+  private void errorCodeTestInMT(MethodHandle callback, int errcode){
+    try{
+      callback.invoke(errcode);
+    }
+    catch(Throwable t){
+      Assertions.fail(t);
+    }
+    int actual = NativeBinder.errorCodeInPreviousCall();
+    Assertions.assertEquals(errcode, actual);
+  }
+
+  @Test
+  public void testErrorCode() throws Throwable{
+    getInstance(); // Initialize ptrErrorCodeCallback
+
+    var desc = FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT);
+    var callback = Linker.nativeLinker()
+                         .downcallHandle(NativeBinder.ptrErrorCodeCallback, desc);
+
+    var test1 = new Thread(() -> errorCodeTestInMT(callback, 100));
+    var test2 = new Thread(() -> errorCodeTestInMT(callback, 200));
+
+    test1.start();
+    test2.start();
+
+    test1.join();
+    test2.join();
   }
 
 }

@@ -8,9 +8,6 @@ Native Binder binds native (C) function to native method in Java without any C c
 
 Native Binder generates stub code dynamically to remove top of 2 arguments - `JNIEnv` and `jobject`/`jclass`. Both are required by JNI specification, but they are not needed in native function. Thus stub code by Native Binder shuffles arguments and calls native function.
 
-> [!IMPORTANT]
-> `errno` cannot be obtained.
-
 * Javadoc: https://yasuenag.github.io/nativebinder/
 * Maven package: https://github.com/YaSuenag/nativebinder/packages/
 
@@ -51,6 +48,28 @@ private void bind() throws Throwable{
   binder.bind(this.getClass(), bindMethods);
 }
 ```
+
+If you want to check `errno` on Linux or `GetLastError()` on Windows, you need to bind via `bindWithErrorCode()`, and get error code via `errorCodeInPreviousCall()` just after the call.
+
+```java
+public native long getauxval(long type);
+
+    : <snip>
+
+var binder = NativeBinder.getInstance();
+binder.bindWithErrorCode(this.getClass(), bindMethods);
+
+var base = this.getauxval(AT_BASE);
+if(base == 0L){  // error
+  System.out.printf("error: errno = %d\n", NativeBinder.errorCodeInPreviousCall());
+}
+else{
+  System.out.printf("Base address: 0x%x\n", base);
+}
+```
+
+> [!CAUTION]
+> You have to access error code on same thread with the method caller because error code would be stored into thread local storage.
 
 # License
 

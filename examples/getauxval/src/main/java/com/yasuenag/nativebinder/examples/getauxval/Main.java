@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Yasumasa Suenaga
+ * Copyright (C) 2024, 2025, Yasumasa Suenaga
  *
  * This file is part of nativebinder.
  *
@@ -40,7 +40,7 @@ public class Main{
     var bindMethod = new NativeBinder.BindMethod(method, p_getauxval);
     var bindMethods = new NativeBinder.BindMethod[]{bindMethod};
     var binder = NativeBinder.getInstance();
-    binder.bind(this.getClass(), bindMethods);
+    binder.bindWithErrorCode(this.getClass(), bindMethods);
   }
 
   public static void main(String[] args) throws Throwable{
@@ -48,7 +48,12 @@ public class Main{
     inst.bind();
 
     var base = inst.getauxval(AT_BASE);
-    System.out.printf("Base address: 0x%x\n", base);
+    if(base == 0L){  // error
+      System.out.printf("error: errno = %d\n", NativeBinder.errorCodeInPreviousCall());
+    }
+    else{
+      System.out.printf("Base address: 0x%x\n", base);
+    }
   }
 
 }

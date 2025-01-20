@@ -88,7 +88,7 @@ along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
                 <configuration>
                     <jvm>${java.home}/bin/java</jvm>
                     <argLine>--enable-native-access=ALL-UNNAMED</argLine>
-                    <argLine>--enable-native-access=com.yasuenag.ffmasm</argLine>
+                    <argLine>--enable-native-access=com.yasuenag.ffmasm,com.yasuenag.nativebinder</argLine>
                 </configuration>
             </plugin>
         </plugins>

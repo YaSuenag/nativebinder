@@ -17,6 +17,8 @@
  */
 package com.yasuenag.nativebinder.internal;
 
+import java.lang.foreign.Linker;
+import java.lang.foreign.MemorySegment;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.OptionalInt;
@@ -40,14 +42,21 @@ public class LinuxNativeBinder extends NativeBinder{
 
   private static final int FP_ARGREG_LIMIT = 8; // xmm0 - xmm7
 
-  @Override
-  protected Transformer[] createArgTransformRule(Method method){
+  /* errno is defined as "*__errno_location ()" in errno.h */
+  private static final MemorySegment __errno_location;
+
+  static{
+    __errno_location = Linker.nativeLinker()
+                             .defaultLookup()
+                             .find("__errno_location")
+                             .get();
+  }
+
+  private Transformer[] createArgTransformRuleInner(Method method, Register fromBaseReg, int fromStackOffset, int toStackOffset){
     var argTypes = method.getParameterTypes();
 
     int intArgs = 0;
     int fpArgs = 0;
-    int fromStackOffset = 8; // RSP + (return address)
-    int toStackOffset = 8; // RSP + (return address)
     var transformers = new ArrayList<Transformer>();
 
     for(int i = 0; i < argTypes.length; i++){
@@ -58,10 +67,10 @@ public class LinuxNativeBinder extends NativeBinder{
         }
         else{
           if(intArgs < intArgRegs.length){
-            transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), intArgRegs[intArgs], OptionalInt.empty(), ArgType.INT));
+            transformers.add(new Transformer(fromBaseReg, OptionalInt.of(fromStackOffset), intArgRegs[intArgs], OptionalInt.empty(), ArgType.INT));
           }
           else{
-            transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), ArgType.INT));
+            transformers.add(new Transformer(fromBaseReg, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), ArgType.INT));
             toStackOffset += 8;
           }
           fromStackOffset += 8;
@@ -71,7 +80,7 @@ public class LinuxNativeBinder extends NativeBinder{
       else if(isFloatingPointClass(type)){
         if(fpArgs >= FP_ARGREG_LIMIT){
           if(fromStackOffset != toStackOffset){
-            transformers.add(new Transformer(Register.RSP, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), ArgType.FP));
+            transformers.add(new Transformer(fromBaseReg, OptionalInt.of(fromStackOffset), Register.RSP, OptionalInt.of(toStackOffset), ArgType.FP));
           }
           fromStackOffset += 8;
           toStackOffset += 8;
@@ -84,6 +93,28 @@ public class LinuxNativeBinder extends NativeBinder{
     }
 
     return transformers.toArray(new Transformer[0]);
+  }
+
+  @Override
+  protected Transformer[] createArgTransformRule(Method method, boolean isJMP){
+    if(isJMP){
+      return createArgTransformRuleInner(method, Register.RSP, 8 /* RSP + (return address) */, 8 /* return address */);
+    }
+    else{
+      return createArgTransformRuleInner(method, Register.RBP, 16 /* RSP + (saved RBP) + (return address) */, 0);
+    }
+  }
+
+  @Override
+  protected AMD64AsmBuilder obtainErrorCode(AMD64AsmBuilder builder){
+    return builder.sub(Register.RSP, 16, OptionalInt.empty()) // 16 bytes aligned
+                  .movMR(Register.RAX, Register.RSP, OptionalInt.of(0)) // evacuate original return val
+                  .movImm(Register.R10, __errno_location.address())
+                  .call(Register.R10) // get errno
+                  .movRM(Register.EDI, Register.RAX, OptionalInt.of(0))
+                  .movImm(Register.R10, ptrErrorCodeCallback.address())
+                  .call(Register.R10)
+                  .pop(Register.RAX, OptionalInt.empty()); // restore original return val
   }
 
   @Override
