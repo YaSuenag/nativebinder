@@ -71,6 +71,25 @@ else{
 > [!CAUTION]
 > You have to access error code on same thread with the method caller because error code would be stored into thread local storage.
 
+If you want to pass `char *` to target native function, you have to convert `String` to `char *` by yourself and pass it.
+
+```java
+public native int puts(long s /* const char* */);
+
+    : <snip>
+
+  try(var arena = Arena.ofConfined()){
+    String str = "Call puts() from Java\n";
+    MemorySegment c_str = arena.allocateFrom(str);
+    inst.puts(c_str.address());
+  }
+```
+
+You have to declare `char *` parameter as `long` because it is a pointer type, then you convert `String` to `MemorySegment`, and pass it. See [puts() example](examples/puts) to learn entire code of calling `puts()`.
+
+> [!TIPS]
+> You should choose appropriate `Arena` type. See [Javadoc of Arena](https://docs.oracle.com/en/java/javase/22/docs/api/java.base/java/lang/foreign/Arena.html) for details.
+
 # License
 
 The GNU Lesser General Public License, version 3.0
