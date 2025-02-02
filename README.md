@@ -87,7 +87,7 @@ public native int puts(long s /* const char* */);
 
 You have to declare `char *` parameter as `long` because it is a pointer type, then you convert `String` to `MemorySegment`, and pass it. See [puts() example](examples/puts) to learn entire code of calling `puts()`.
 
-> [!TIPS]
+> [!TIP]
 > You should choose appropriate `Arena` type. See [Javadoc of Arena](https://docs.oracle.com/en/java/javase/22/docs/api/java.base/java/lang/foreign/Arena.html) for details.
 
 # License
