@@ -23,7 +23,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.OptionalInt;
 
-import com.yasuenag.ffmasm.amd64.AMD64AsmBuilder;
+import com.yasuenag.ffmasm.AsmBuilder;
 import com.yasuenag.ffmasm.amd64.Register;
 
 import com.yasuenag.nativebinder.NativeBinder;
@@ -106,15 +106,15 @@ public class LinuxNativeBinder extends AMD64NativeBinder{
   }
 
   @Override
-  protected AMD64AsmBuilder obtainErrorCode(AMD64AsmBuilder builder){
-    return builder.sub(Register.RSP, 16, OptionalInt.empty()) // 16 bytes aligned
-                  .movMR(Register.RAX, Register.RSP, OptionalInt.of(0)) // evacuate original return val
-                  .movImm(Register.R10, __errno_location.address())
-                  .call(Register.R10) // get errno
-                  .movRM(Register.EDI, Register.RAX, OptionalInt.of(0))
-                  .movImm(Register.R10, ptrErrorCodeCallback.address())
-                  .call(Register.R10)
-                  .pop(Register.RAX, OptionalInt.empty()); // restore original return val
+  protected void obtainErrorCode(AsmBuilder.AVX builder){
+    builder.sub(Register.RSP, 16, OptionalInt.empty()) // 16 bytes aligned
+           .movMR(Register.RAX, Register.RSP, OptionalInt.of(0)) // evacuate original return val
+           .movImm(Register.R10, __errno_location.address())
+           .call(Register.R10) // get errno
+           .movRM(Register.EDI, Register.RAX, OptionalInt.of(0))
+           .movImm(Register.R10, ptrErrorCodeCallback.address())
+           .call(Register.R10)
+           .pop(Register.RAX, OptionalInt.empty()); // restore original return val
   }
 
   @Override
