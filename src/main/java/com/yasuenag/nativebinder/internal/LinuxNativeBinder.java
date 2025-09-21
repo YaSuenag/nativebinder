@@ -29,7 +29,7 @@ import com.yasuenag.ffmasm.amd64.Register;
 import com.yasuenag.nativebinder.NativeBinder;
 
 
-public class LinuxNativeBinder extends NativeBinder{
+public class LinuxNativeBinder extends AMD64NativeBinder{
 
   private static final Register[] intArgRegs = new Register[]{
                                                  Register.RDI,

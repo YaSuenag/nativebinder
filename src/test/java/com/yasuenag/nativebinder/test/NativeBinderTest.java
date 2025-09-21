@@ -19,19 +19,13 @@ package com.yasuenag.nativebinder.test;
 
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
-import java.lang.foreign.Linker;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
-import java.lang.reflect.Method;
-import java.util.Arrays;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
-
-import com.yasuenag.ffmasm.amd64.AMD64AsmBuilder;
-import com.yasuenag.ffmasm.amd64.Register;
 
 import com.yasuenag.nativebinder.NativeBinder;
 import com.yasuenag.nativebinder.internal.LinuxNativeBinder;
@@ -41,17 +35,12 @@ import com.yasuenag.nativebinder.internal.WindowsNativeBinder;
 public class NativeBinderTest extends NativeBinder{
 
   @Override
-  protected Transformer[] createArgTransformRule(Method method, boolean isJMP){
+  public void bind(Class<?> targetClass, BindMethod[] bindMethods) throws Throwable{
     throw new RuntimeException("Not implemented");
   }
 
   @Override
-  protected AMD64AsmBuilder obtainErrorCode(AMD64AsmBuilder builder){
-    throw new RuntimeException("Not implemented");
-  }
-
-  @Override
-  protected Register xmmVolatileRegister(){
+  public void bindWithErrorCode(Class<?> targetClass, BindMethod[] bindMethods) throws Throwable{
     throw new RuntimeException("Not implemented");
   }
 
