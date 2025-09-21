@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
  */
-package com.yasuenag.nativebinder.test.internal;
+package com.yasuenag.nativebinder.test.internal.amd64;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -28,7 +28,7 @@ import org.junit.jupiter.api.condition.OS;
 import com.yasuenag.ffmasm.amd64.Register;
 
 import com.yasuenag.nativebinder.NativeBinder;
-import com.yasuenag.nativebinder.internal.LinuxNativeBinder;
+import com.yasuenag.nativebinder.internal.amd64.LinuxNativeBinder;
 
 
 @EnabledOnOs(OS.LINUX)

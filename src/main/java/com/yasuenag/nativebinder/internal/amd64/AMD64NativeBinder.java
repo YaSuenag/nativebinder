@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
  */
-package com.yasuenag.nativebinder.internal;
+package com.yasuenag.nativebinder.internal.amd64;
 
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.MemorySegment;

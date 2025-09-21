@@ -32,7 +32,7 @@ import com.yasuenag.ffmasm.CodeSegment;
 import com.yasuenag.ffmasm.PlatformException;
 import com.yasuenag.ffmasm.UnsupportedPlatformException;
 
-import com.yasuenag.nativebinder.internal.AMD64NativeBinder;
+import com.yasuenag.nativebinder.internal.amd64.AMD64NativeBinder;
 
 
 /**
