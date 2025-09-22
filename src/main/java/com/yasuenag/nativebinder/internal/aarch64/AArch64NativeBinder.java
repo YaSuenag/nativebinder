@@ -198,6 +198,7 @@ public abstract class AArch64NativeBinder extends NativeBinder{
       obtainErrorCode(builder);
 
       builder
+/* mov  sp, x29              */ .mov(Register.SP, Register.X29)
 /* ldp x29, x30, [sp], #16   */ .ldp(Register.X29, Register.X30, Register.SP, IndexClass.PostIndex, 16)
 /* ret                       */ .ret(Optional.empty());
 

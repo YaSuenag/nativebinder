@@ -54,7 +54,7 @@ public class LinuxNativeBinder extends AArch64NativeBinder{
                              .get();
   }
 
-  private Transformer[] createArgTransformRuleInner(Method method, int fromStackOffset){
+  private Transformer[] createArgTransformRuleInner(Method method, Register fromBaseReg, int fromStackOffset){
     var argTypes = method.getParameterTypes();
 
     int toStackOffset = 0;
@@ -70,10 +70,10 @@ public class LinuxNativeBinder extends AArch64NativeBinder{
         }
         else{
           if(intArgs < intArgRegs.length){
-            transformers.add(new Transformer(Register.SP, OptionalInt.of(fromStackOffset), intArgRegs[intArgs], OptionalInt.empty(), ArgType.INT));
+            transformers.add(new Transformer(fromBaseReg, OptionalInt.of(fromStackOffset), intArgRegs[intArgs], OptionalInt.empty(), ArgType.INT));
           }
           else{
-            transformers.add(new Transformer(Register.SP, OptionalInt.of(fromStackOffset), Register.SP, OptionalInt.of(toStackOffset), ArgType.INT));
+            transformers.add(new Transformer(fromBaseReg, OptionalInt.of(fromStackOffset), Register.SP, OptionalInt.of(toStackOffset), ArgType.INT));
             toStackOffset += 8;
           }
           fromStackOffset += 8;
@@ -83,7 +83,7 @@ public class LinuxNativeBinder extends AArch64NativeBinder{
       else if(isFloatingPointClass(type)){
         if(fpArgs >= FP_ARGREG_LIMIT){
           if(fromStackOffset != toStackOffset){
-            transformers.add(new Transformer(Register.SP, OptionalInt.of(fromStackOffset), Register.SP, OptionalInt.of(toStackOffset), ArgType.FP));
+            transformers.add(new Transformer(fromBaseReg, OptionalInt.of(fromStackOffset), Register.SP, OptionalInt.of(toStackOffset), ArgType.FP));
           }
           fromStackOffset += 8;
           toStackOffset += 8;
@@ -100,8 +100,12 @@ public class LinuxNativeBinder extends AArch64NativeBinder{
 
   @Override
   protected Transformer[] createArgTransformRule(Method method, boolean isJMP){
-    int fromStackOffset = isJMP ? 0 : 16 /* X29 + X30 */;
-    return createArgTransformRuleInner(method, fromStackOffset);
+    if(isJMP){
+      return createArgTransformRuleInner(method, Register.SP, 0);
+    }
+    else{
+      return createArgTransformRuleInner(method, Register.X29, 16 /* Saved FP + LR */);
+    }
   }
 
   @Override
@@ -109,18 +113,19 @@ public class LinuxNativeBinder extends AArch64NativeBinder{
     long errno_addr = __errno_location.address();
     long cb_addr = ptrErrorCodeCallback.address();
 
-    builder.stp(Register.X0, Register.X0, Register.SP, IndexClass.PreIndex, -16) // evacuate original return val with 16 byttes alignment
+    builder.stp(Register.X0, Register.X0, Register.SP, IndexClass.PreIndex, -16) // evacuate original return val with 16 bytes alignment
            .movz(Register.X9, (int)(errno_addr & 0xffff), HWShift.None)
            .movk(Register.X9, (int)((errno_addr >> 16) & 0xffff), HWShift.HW_16)
            .movk(Register.X9, (int)((errno_addr >> 32) & 0xffff), HWShift.HW_32)
            .movk(Register.X9, (int)((errno_addr >> 48) & 0xffff), HWShift.HW_48)
-           .br(Register.X9) // get errno
+           .blr(Register.X9) // get errno
+           .ldr(Register.X0, Register.X0, IndexClass.UnsignedOffset, 0)
            .movz(Register.X9, (int)(cb_addr & 0xffff), HWShift.None)
            .movk(Register.X9, (int)((cb_addr >> 16) & 0xffff), HWShift.HW_16)
            .movk(Register.X9, (int)((cb_addr >> 32) & 0xffff), HWShift.HW_32)
            .movk(Register.X9, (int)((cb_addr >> 48) & 0xffff), HWShift.HW_48)
-           .br(Register.X9)
-           .ldp(Register.X0, Register.X0, Register.SP, IndexClass.PostIndex, 16); // restore original return val
+           .blr(Register.X9)
+           .ldp(Register.X0, Register.X9 /* dummy */, Register.SP, IndexClass.PostIndex, 16); // restore original return val
   }
 
 }
