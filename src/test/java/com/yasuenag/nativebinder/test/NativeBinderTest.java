@@ -28,8 +28,8 @@ import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
 import com.yasuenag.nativebinder.NativeBinder;
-import com.yasuenag.nativebinder.internal.LinuxNativeBinder;
-import com.yasuenag.nativebinder.internal.WindowsNativeBinder;
+import com.yasuenag.nativebinder.internal.amd64.LinuxNativeBinder;
+import com.yasuenag.nativebinder.internal.amd64.WindowsNativeBinder;
 
 
 public class NativeBinderTest extends NativeBinder{

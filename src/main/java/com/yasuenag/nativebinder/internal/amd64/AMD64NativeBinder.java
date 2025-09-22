@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
  */
-package com.yasuenag.nativebinder.internal;
+package com.yasuenag.nativebinder.internal.amd64;
 
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.MemorySegment;
@@ -25,13 +25,11 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.OptionalInt;
 
+import com.yasuenag.ffmasm.AsmBuilder;
 import com.yasuenag.ffmasm.NativeRegister;
 import com.yasuenag.ffmasm.PlatformException;
 import com.yasuenag.ffmasm.UnsupportedPlatformException;
-import com.yasuenag.ffmasm.amd64.AMD64AsmBuilder;
-import com.yasuenag.ffmasm.amd64.AVXAsmBuilder;
 import com.yasuenag.ffmasm.amd64.Register;
-import com.yasuenag.ffmasm.amd64.SSEAsmBuilder;
 
 import com.yasuenag.nativebinder.NativeBinder;
 
@@ -88,24 +86,23 @@ public abstract class AMD64NativeBinder extends NativeBinder{
   /**
    * Generate machine code to obtain error code (errno in Linux, GetLastError() in Windows)
    *
-   * @param builder AMD64AsmBuilder instance for generating stub code.
-   * @return builder instance
+   * @param builder AsmBuilder instance for generating stub code.
    */
-  protected abstract AMD64AsmBuilder obtainErrorCode(AMD64AsmBuilder builder);
+  protected abstract void obtainErrorCode(AsmBuilder.AVX builder);
 
   private static void init(){
     if(!initialized){
       try{
         var desc = FunctionDescriptor.of(ValueLayout.JAVA_INT);
-        var cpuid = AMD64AsmBuilder.create(AMD64AsmBuilder.class, seg, desc)
-            /* push %rbp        */ .push(Register.RBP)
-            /* mov  %rsp, %rbp  */ .movMR(Register.RSP, Register.RBP, OptionalInt.empty())
-            /* mov  %rax, $0x01 */ .movImm(Register.RAX, 0x01L)
-            /* cpuid            */ .cpuid()
-            /* mov  %rcx, %rax  */ .movMR(Register.RCX, Register.RAX, OptionalInt.empty())
-            /* leave            */ .leave()
-            /* ret              */ .ret()
-                                   .build("cpuid");
+        var cpuid = new AsmBuilder.AMD64(seg, desc)
+           /* push %rbp        */ .push(Register.RBP)
+           /* mov  %rsp, %rbp  */ .movMR(Register.RSP, Register.RBP, OptionalInt.empty())
+           /* mov  %rax, $0x01 */ .movImm(Register.RAX, 0x01L)
+           /* cpuid            */ .cpuid()
+           /* mov  %rcx, %rax  */ .movMR(Register.RCX, Register.RAX, OptionalInt.empty())
+           /* leave            */ .leave()
+           /* ret              */ .ret()
+                                  .build("cpuid");
         int ecx = (int)cpuid.invoke();
         isAVX = ((ecx >>> 28) & 1) == 1;
       }
@@ -144,7 +141,7 @@ public abstract class AMD64NativeBinder extends NativeBinder{
    */
   protected abstract Register xmmVolatileRegister();
 
-  private AMD64AsmBuilder bindInner(AMD64AsmBuilder builder, Transformer[] rule){
+  private void bindInner(AsmBuilder.AVX builder, Transformer[] rule){
     for(var transformer : rule){
       if(transformer.fromOffset().isEmpty() && transformer.toOffset().isEmpty()){
         // reg to reg
@@ -152,8 +149,7 @@ public abstract class AMD64NativeBinder extends NativeBinder{
           builder.movMR(transformer.from(), transformer.to(), OptionalInt.empty());
         }
         else{ // should be FP
-          builder.cast(SSEAsmBuilder.class)
-                 .movdqaMR(transformer.from(), transformer.to(), OptionalInt.empty());
+          builder.movdqaMR(transformer.from(), transformer.to(), OptionalInt.empty());
         }
       }
       else if(transformer.fromOffset().isPresent() && transformer.toOffset().isEmpty()){
@@ -162,8 +158,7 @@ public abstract class AMD64NativeBinder extends NativeBinder{
           builder.movRM(transformer.to(), transformer.from(), transformer.fromOffset());
         }
         else{ // should be FP
-          builder.cast(SSEAsmBuilder.class)
-                 .movqRM(transformer.to(), transformer.from(), transformer.fromOffset());
+          builder.movqRM(transformer.to(), transformer.from(), transformer.fromOffset());
         }
       }
       else if(transformer.fromOffset().isPresent() && transformer.toOffset().isPresent()){
@@ -174,8 +169,7 @@ public abstract class AMD64NativeBinder extends NativeBinder{
         }
         else{ // should be PF
           var tmpReg = xmmVolatileRegister();
-          builder.cast(SSEAsmBuilder.class)
-                 .movqRM(tmpReg, transformer.from(), transformer.fromOffset())
+          builder.movqRM(tmpReg, transformer.from(), transformer.fromOffset())
                  .movqMR(tmpReg, transformer.to(), transformer.toOffset());
         }
       }
@@ -183,8 +177,6 @@ public abstract class AMD64NativeBinder extends NativeBinder{
         throw new IllegalStateException("Should not be reg-mem");
       }
     }
-
-    return builder;
   }
 
   /**
@@ -197,13 +189,9 @@ public abstract class AMD64NativeBinder extends NativeBinder{
     for(var bindMethod : bindMethods){
       var rule = createArgTransformRule(bindMethod.method(), true);
 
-      AMD64AsmBuilder builder;
+      var builder = new AsmBuilder.AVX(seg);
       if(isAVX){
-        builder = AMD64AsmBuilder.create(AVXAsmBuilder.class, seg)
-                                 .vzeroupper();
-      }
-      else{
-        builder = AMD64AsmBuilder.create(SSEAsmBuilder.class, seg);
+        builder.vzeroupper();
       }
 
       bindInner(builder, rule);
@@ -228,7 +216,6 @@ public abstract class AMD64NativeBinder extends NativeBinder{
     var methodMap = new HashMap<Method, MemorySegment>();
 
     for(var bindMethod : bindMethods){
-      var klass = isAVX ? AVXAsmBuilder.class : SSEAsmBuilder.class;
       // Stack size is estimated a max value.
       int stackSize = 8 * bindMethod.method().getParameterTypes().length;
       if(stackSize < 32){  // for Windows reg param stack
@@ -237,14 +224,13 @@ public abstract class AMD64NativeBinder extends NativeBinder{
       int alignedStackSize = ((stackSize & 0xf) == 0) ? stackSize
                                                       : (stackSize + 0x10) & 0xfffffff0;
 
-      var builder = AMD64AsmBuilder.create(klass, seg)
+      var builder = new AsmBuilder.AVX(seg)
 /* push %rbp                    */ .push(Register.RBP)
 /* mov %rsp,               %rbp */ .movMR(Register.RSP, Register.RBP, OptionalInt.empty())
 /* sub <alignedStackSize>, %rsp */ .sub(Register.RSP, alignedStackSize, OptionalInt.empty());
 
       if(isAVX){
-        builder.cast(AVXAsmBuilder.class)
-               .vzeroupper();
+        builder.vzeroupper();
       }
 
       var rule = createArgTransformRule(bindMethod.method(), false);
