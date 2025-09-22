@@ -28,8 +28,6 @@ import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
 import com.yasuenag.nativebinder.NativeBinder;
-import com.yasuenag.nativebinder.internal.amd64.LinuxNativeBinder;
-import com.yasuenag.nativebinder.internal.amd64.WindowsNativeBinder;
 
 
 public class NativeBinderTest extends NativeBinder{
@@ -45,17 +43,24 @@ public class NativeBinderTest extends NativeBinder{
   }
 
   @Test
-  @EnabledOnOs(OS.LINUX)
-  public void testGetInstanceOnLinux() throws Exception{
+  @EnabledOnOs(value = {OS.LINUX}, architectures = {"amd64"})
+  public void testGetInstanceOnAMD64Linux() throws Exception{
     var inst = NativeBinderTest.getInstance();
-    Assertions.assertEquals(LinuxNativeBinder.class, inst.getClass());
+    Assertions.assertEquals(com.yasuenag.nativebinder.internal.amd64.LinuxNativeBinder.class, inst.getClass());
+  }
+
+  @Test
+  @EnabledOnOs(value = {OS.LINUX}, architectures = {"aarch64"})
+  public void testGetInstanceOnAArch64Linux() throws Exception{
+    var inst = NativeBinderTest.getInstance();
+    Assertions.assertEquals(com.yasuenag.nativebinder.internal.aarch64.LinuxNativeBinder.class, inst.getClass());
   }
 
   @Test
   @EnabledOnOs(OS.WINDOWS)
   public void testGetInstanceOnWindows() throws Exception{
     var inst = NativeBinderTest.getInstance();
-    Assertions.assertEquals(WindowsNativeBinder.class, inst.getClass());
+    Assertions.assertEquals(com.yasuenag.nativebinder.internal.amd64.WindowsNativeBinder.class, inst.getClass());
   }
 
   @Test
