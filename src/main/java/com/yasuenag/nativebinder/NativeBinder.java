@@ -32,6 +32,7 @@ import com.yasuenag.ffmasm.CodeSegment;
 import com.yasuenag.ffmasm.PlatformException;
 import com.yasuenag.ffmasm.UnsupportedPlatformException;
 
+import com.yasuenag.nativebinder.internal.aarch64.AArch64NativeBinder;
 import com.yasuenag.nativebinder.internal.amd64.AMD64NativeBinder;
 
 
@@ -125,10 +126,11 @@ public abstract class NativeBinder{
     init();
 
     var arch = System.getProperty("os.arch");
-    if(arch.equals("amd64")){
-      return AMD64NativeBinder.getInstance();
-    }
-    throw new UnsupportedPlatformException(arch);
+    return switch(arch){
+      case "amd64" -> AMD64NativeBinder.getInstance();
+      case "aarch64" -> AArch64NativeBinder.getInstance();
+      default -> throw new UnsupportedPlatformException(arch);
+    };
   }
 
   /**
