@@ -29,9 +29,7 @@ along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
     <name>NativeBinder</name>
 
     <scm>
-        <connection>scm:git:git://github.com/YaSuenag/nativebinder.git</connection>
-        <developerConnection>scm:git:ssh://github.com:YaSuenag/nativebinder.git</developerConnection>
-        <url>https://github.com/YaSuenag/nativebinder</url>
+        <url>https://github.com/yasuenag/nativebinder</url>
     </scm>
 
     <properties>
@@ -45,7 +43,7 @@ along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
     <repositories>
         <repository>
             <id>github</id>
-            <url>https://maven.pkg.github.com/YaSuenag/ffmasm</url>
+            <url>https://maven.pkg.github.com/yasuenag/ffmasm</url>
         </repository>
     </repositories>
 
@@ -53,7 +51,7 @@ along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
         <dependency>
             <groupId>com.yasuenag</groupId>
             <artifactId>ffmasm</artifactId>
-            <version>0.6.1</version>
+            <version>0.6.2</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -98,7 +96,7 @@ along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
         <repository>
             <id>github</id>
             <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/YaSuenag/nativebinder</url>
+            <url>https://maven.pkg.github.com/yasuenag/nativebinder</url>
         </repository>
     </distributionManagement>
 </project>
