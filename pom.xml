@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-Copyright (C) 2024, 2025, Yasumasa Suenaga
+Copyright (C) 2024, 2026, Yasumasa Suenaga
 
 This file is part of nativebinder.
 
@@ -51,7 +51,7 @@ along with nativebinder. If not, see <http://www.gnu.org/licenses/>.
         <dependency>
             <groupId>com.yasuenag</groupId>
             <artifactId>ffmasm</artifactId>
-            <version>0.6.2</version>
+            <version>0.6.4</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
